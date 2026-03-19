@@ -36,6 +36,10 @@ from views.tabs.tab_auto        import TabAuto
 APP_TITLE   = "PyMeOS – Orienteering Software"
 APP_VERSION = "5.0.0"
 
+# File-dialog filter strings used in multiple places
+_OPEN_FILTER = "MeOS XML (*.meosxml *.mexml *.xml);;All Files (*)"
+_SAVE_FILTER = "MeOS XML (*.mexml);;All Files (*)"
+
 
 class MainWindow(QMainWindow):
     def __init__(self, db_url: str = "sqlite:///pymeos.db") -> None:
@@ -75,24 +79,24 @@ class MainWindow(QMainWindow):
 
         # File menu
         file_menu = mb.addMenu("&File")
-        act_new   = QAction("&New Competition", self,
-                            shortcut=QKeySequence.New,
-                            triggered=self._action_new)
-        act_open  = QAction("&Open…", self,
-                            shortcut=QKeySequence.Open,
-                            triggered=self._action_open)
-        act_save  = QAction("&Save", self,
-                            shortcut=QKeySequence.Save,
-                            triggered=self._action_save)
-        act_saveas= QAction("Save &As…", self,
-                            triggered=self._action_save_as)
+        act_new    = QAction("&New Competition", self,
+                             shortcut=QKeySequence.New,
+                             triggered=self._action_new)
+        act_open   = QAction("&Open…", self,
+                             shortcut=QKeySequence.Open,
+                             triggered=self._action_open)
+        act_save   = QAction("&Save", self,
+                             shortcut=QKeySequence.Save,
+                             triggered=self._action_save)
+        act_saveas = QAction("Save &As…", self,
+                             triggered=self._action_save_as)
         act_import_iof = QAction("Import IOF XML 3.0…", self,
                                  triggered=self._action_import_iof)
         act_export_iof = QAction("Export IOF XML 3.0…", self,
                                  triggered=self._action_export_iof)
-        act_quit  = QAction("&Quit", self,
-                            shortcut=QKeySequence.Quit,
-                            triggered=self.close)
+        act_quit   = QAction("&Quit", self,
+                             shortcut=QKeySequence.Quit,
+                             triggered=self.close)
 
         file_menu.addAction(act_new)
         file_menu.addAction(act_open)
@@ -130,7 +134,7 @@ class MainWindow(QMainWindow):
     def _build_toolbar(self):
         tb = self.addToolBar("Main")
         tb.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
-        tb.addAction(QAction("New", self, triggered=self._action_new))
+        tb.addAction(QAction("New",  self, triggered=self._action_new))
         tb.addAction(QAction("Open", self, triggered=self._action_open))
         tb.addAction(QAction("Save", self, triggered=self._action_save))
         tb.addSeparator()
@@ -194,7 +198,7 @@ class MainWindow(QMainWindow):
     def _action_open(self):
         path, _ = QFileDialog.getOpenFileName(
             self, "Open Competition",
-            filter="MeOS XML (*.mexml);;All files (*)")
+            filter=_OPEN_FILTER)
         if path:
             ok = self._ctrl.open_event_from_xml(path)
             if ok:
@@ -212,9 +216,9 @@ class MainWindow(QMainWindow):
     def _action_save_as(self):
         path, _ = QFileDialog.getSaveFileName(
             self, "Save Competition",
-            filter="MeOS XML (*.mexml);;All files (*)")
+            filter=_SAVE_FILTER)
         if path:
-            if not path.endswith(".mexml"):
+            if not path.endswith((".mexml", ".meosxml")):
                 path += ".mexml"
             self._ctrl.event.current_file = path
             self._ctrl.save_event_to_xml(path)
@@ -222,7 +226,7 @@ class MainWindow(QMainWindow):
     def _action_import_iof(self):
         path, _ = QFileDialog.getOpenFileName(
             self, "Import IOF XML 3.0",
-            filter="IOF XML (*.xml);;All files (*)")
+            filter="IOF XML (*.xml);;All Files (*)")
         if not path:
             return
         from formats.iof30 import import_iof30
@@ -236,7 +240,7 @@ class MainWindow(QMainWindow):
     def _action_export_iof(self):
         path, _ = QFileDialog.getSaveFileName(
             self, "Export IOF XML 3.0",
-            filter="IOF XML (*.xml);;All files (*)")
+            filter="IOF XML (*.xml);;All Files (*)")
         if not path:
             return
         from formats.iof30 import export_result_list
@@ -253,8 +257,9 @@ class MainWindow(QMainWindow):
     def _action_recalc(self):
         self._ctrl.recalculate_all_results()
         self._show_status("Results recalculated.")
-        if isinstance(self._tabs.currentWidget(), TabResults):
-            self._tabs.currentWidget().load_page()
+        current = self._tabs.currentWidget()
+        if isinstance(current, TabResults):
+            current.load_page()
 
     def _action_draw(self):
         """Simple draw dialog – full implementation in TabClass."""
@@ -290,9 +295,9 @@ class MainWindow(QMainWindow):
     def _on_card_received(self, si_card):
         """Route incoming SI card to the controller."""
         from hardware.si_reader import SICardReadEvent
-        port = self._si_mgr.open_ports[0] if self._si_mgr.open_ports else ""
+        port = (self._si_mgr.open_ports[0]
+                if self._si_mgr.open_ports else "")
         self._ctrl.on_card_read(SICardReadEvent(card=si_card, port=port))
-        # Refresh SI tab if visible
         if isinstance(self._tabs.currentWidget(), TabSI):
             self._tabs.currentWidget().load_page()
 
@@ -329,14 +334,12 @@ class MainWindow(QMainWindow):
             w = self._tabs.widget(i)
             if hasattr(w, "clear_competition_data"):
                 w.clear_competition_data()
-        # Load current tab immediately
         w = self._tabs.currentWidget()
         if hasattr(w, "load_page"):
             w.load_page()
 
     def closeEvent(self, event):
-        """Ask to save only when a file is associated and the event has data."""
-        ev = self._ctrl.event
+        ev       = self._ctrl.event
         has_file = bool(ev and ev.current_file)
         has_data = bool(ev and ev.data_revision > 0)
 

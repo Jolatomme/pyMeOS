@@ -154,6 +154,18 @@ class CompetitionController(QObject):
             return False
 
     # ------------------------------------------------------------------
+    # Convenience aliases (used by tab_competition.py and other views)
+    # ------------------------------------------------------------------
+
+    def load_from_xml(self, path: str) -> bool:
+        """Alias for open_event_from_xml (called by tab_competition.py)."""
+        return self.open_event_from_xml(path)
+
+    def save_to_xml(self, path: str) -> bool:
+        """Alias for save_event_to_xml (called by tab_competition.py)."""
+        return self.save_event_to_xml(path)
+
+    # ------------------------------------------------------------------
     # SI card handling
     # ------------------------------------------------------------------
 

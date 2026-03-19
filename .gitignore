@@ -31,6 +31,7 @@ Thumbs.db
 
 # MeOS XML backups
 *.mexml.bak
+*.meosxml
 
 # Logs
 *.log
