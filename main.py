@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -24,8 +25,28 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+# ---------------------------------------------------------------------------
+# Qt environment tweaks – MUST happen before QApplication is created
+# ---------------------------------------------------------------------------
+
+# Silence the "dbus reply error" spam from the GNOME platform-theme plugin.
+# This fires whenever Qt runs outside a full GNOME session (KDE, XFCE, TTY,
+# plain X11, Wayland without gnome-session, etc.).  The app works perfectly
+# without the GNOME theme service; the messages are purely informational noise.
+_existing_rules = os.environ.get("QT_LOGGING_RULES", "")
+_gnome_rule = "qt.qpa.theme.gnome=false"
+if _gnome_rule not in _existing_rules:
+    os.environ["QT_LOGGING_RULES"] = (
+        f"{_existing_rules};{_gnome_rule}" if _existing_rules else _gnome_rule
+    )
+
+# High-DPI rounding policy must be set before QApplication is instantiated.
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore    import Qt
+
+QApplication.setHighDpiScaleFactorRoundingPolicy(
+    Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
+)
 
 from views.main_window import MainWindow
 
@@ -61,13 +82,6 @@ def main() -> int:
     app.setApplicationName("PyMeOS")
     app.setApplicationVersion("5.0.0")
     app.setOrganizationName("PyMeOS Community")
-
-    # High-DPI support
-    try:
-        app.setHighDpiScaleFactorRoundingPolicy(
-            Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
-    except AttributeError:
-        pass
 
     window = MainWindow(db_url=args.db)
     window.show()
