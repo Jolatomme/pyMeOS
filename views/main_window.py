@@ -335,7 +335,12 @@ class MainWindow(QMainWindow):
             w.load_page()
 
     def closeEvent(self, event):
-        if self._ctrl.event:
+        """Ask to save only when a file is associated and the event has data."""
+        ev = self._ctrl.event
+        has_file = bool(ev and ev.current_file)
+        has_data = bool(ev and ev.data_revision > 0)
+
+        if has_file and has_data:
             reply = QMessageBox.question(
                 self, "Quit",
                 "Save before quitting?",
@@ -346,6 +351,7 @@ class MainWindow(QMainWindow):
                 return
             if reply == QMessageBox.Yes:
                 self._action_save()
+
         self._si_mgr.close_all()
         event.accept()
 

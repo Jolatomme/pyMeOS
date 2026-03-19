@@ -27,6 +27,9 @@ class TestCRCHelpers:
         data = bytes(range(8))
         assert calc_crc(data) == calc_crc(data)
 
+    def test_crc_different_data(self):
+        assert calc_crc(b"\x01\x02") != calc_crc(b"\x01\x03")
+
     def test_check_crc_round_trip(self):
         payload = b"\x10\x20\x30\x40"
         crc = calc_crc(payload)
@@ -39,6 +42,9 @@ class TestCRCHelpers:
         buf = bytearray(payload + bytes([crc >> 8, crc & 0xFF]))
         buf[-1] ^= 0xFF   # flip last byte
         assert not check_crc(bytes(buf))
+
+    def test_check_crc_too_short(self):
+        assert not check_crc(b"\x01")
 
 
 # ---------------------------------------------------------------------------
@@ -99,15 +105,32 @@ class TestSIReaderManagerTestMode:
         received = []
         mgr.card_received.connect(lambda c: received.append(c))
 
-        # Give the test reader time to emit a synthetic card
-        qtbot.wait(500)
+        # SITestReader default interval is 500 ms; wait 1.5 s to be safe
+        qtbot.wait(1500)
         mgr.close_all()
 
-        # The SITestReader emits cards automatically
-        assert len(received) >= 0   # may be 0 if timing is tight; just no crash
+        assert len(received) >= 1
 
     def test_close_all_clears_ports(self, qtbot):
         mgr = SIReaderManager()
         mgr.open_port("TEST", test_mode=True)
         mgr.close_all()
         assert mgr.open_ports == []
+
+    def test_multiple_cards_emitted(self, qtbot):
+        """Over 1.5 s at 500 ms interval we expect at least 2 cards."""
+        mgr = SIReaderManager()
+        received = []
+        mgr.open_port("TEST", test_mode=True)
+        mgr.card_received.connect(lambda c: received.append(c))
+        qtbot.wait(1500)
+        mgr.close_all()
+        assert len(received) >= 2
+
+    def test_reopen_port(self, qtbot):
+        """Opening the same port twice is a no-op (returns True)."""
+        mgr = SIReaderManager()
+        assert mgr.open_port("TEST", test_mode=True)
+        assert mgr.open_port("TEST", test_mode=True)   # idempotent
+        assert mgr.open_ports.count("TEST") == 1
+        mgr.close_all()

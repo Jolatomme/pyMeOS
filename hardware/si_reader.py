@@ -11,6 +11,7 @@ Replaces the Win32 thread + HANDLE SportIdent.cpp with:
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from typing import Dict, List, Optional
 
@@ -69,8 +70,9 @@ class SIPortReader(QThread):
 
     BAUD = 38400
 
-    def __init__(self, port: str, parent: Optional[QObject] = None) -> None:
-        super().__init__(parent)
+    def __init__(self, port: str, parent=None) -> None:
+        # NOTE: do NOT pass parent – Qt must not auto-delete a running thread
+        super().__init__(None)
         self.port     = port
         self._running = False
         self._ser: Optional["serial.Serial"] = None
@@ -202,28 +204,36 @@ class SITestReader(QThread):
     error         = Signal(str, str)
     station_info  = Signal(str, object)
 
+    # Short default interval so tests don't have to wait long
+    DEFAULT_INTERVAL_MS = 500
+
     def __init__(self, port: str = "TEST",
                  cards: Optional[List[SICard]] = None,
-                 interval_ms: int = 3000,
-                 parent: Optional[QObject] = None) -> None:
-        super().__init__(parent)
+                 interval_ms: int = DEFAULT_INTERVAL_MS,
+                 parent=None) -> None:
+        # NOTE: do NOT pass parent – Qt must not auto-delete a running thread
+        super().__init__(None)
         self.port      = port
         self._cards    = cards or _default_test_cards()
         self._interval = interval_ms / 1000.0
-        self._running  = False
+        self._stop_event = threading.Event()
 
     def run(self) -> None:
-        self._running = True
         idx = 0
-        while self._running:
-            time.sleep(self._interval)
-            if not self._running:
-                break
+        while not self._stop_event.wait(timeout=self._interval):
             _emit(self.card_received, self._cards[idx % len(self._cards)])
             idx += 1
 
     def stop(self) -> None:
-        self._running = False
+        """Signal the thread to stop; returns immediately."""
+        self._stop_event.set()
+
+    def wait(self, msecs: int = -1) -> bool:
+        """Block until the thread finishes (with optional timeout in ms)."""
+        if _QT:
+            # Use Qt's wait for proper event-loop integration
+            return super().wait(msecs) if msecs >= 0 else super().wait()
+        return True
 
 
 def _default_test_cards() -> List[SICard]:
@@ -256,21 +266,40 @@ class SIReaderManager(QObject):
     station_info  = Signal(str, object)
     ports_changed = Signal(list)
 
-    def __init__(self, parent: Optional[QObject] = None) -> None:
+    def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self._readers: Dict[str, QThread] = {}
+
+    # ------------------------------------------------------------------
+    # Lifecycle
+    # ------------------------------------------------------------------
+
+    def __del__(self) -> None:
+        """Ensure all threads are stopped when the manager is garbage-collected."""
+        try:
+            self.close_all()
+        except Exception:
+            pass
+
+    # ------------------------------------------------------------------
+    # Port management
+    # ------------------------------------------------------------------
 
     def open_port(self, port: str, test_mode: bool = False) -> bool:
         if port in self._readers:
             return True
         if test_mode or port.upper() == "TEST":
-            reader: QThread = SITestReader(port=port, parent=self)
+            reader: QThread = SITestReader(port=port)
         else:
-            reader = SIPortReader(port=port, parent=self)
+            reader = SIPortReader(port=port)
 
-        reader.card_received.connect(self.card_received)
-        reader.error.connect(self.error)
-        reader.station_info.connect(self.station_info)
+        if hasattr(reader, 'card_received'):
+            reader.card_received.connect(self.card_received)
+        if hasattr(reader, 'error'):
+            reader.error.connect(self.error)
+        if hasattr(reader, 'station_info'):
+            reader.station_info.connect(self.station_info)
+
         reader.start()
         self._readers[port] = reader
         _emit(self.ports_changed, list(self._readers.keys()))
@@ -278,10 +307,14 @@ class SIReaderManager(QObject):
 
     def close_port(self, port: str) -> None:
         reader = self._readers.pop(port, None)
-        if reader:
-            if hasattr(reader, "stop"):
-                reader.stop()
-            reader.wait(2000)
+        if reader is None:
+            return
+        # Signal the thread to stop
+        if hasattr(reader, "stop"):
+            reader.stop()
+        # Wait up to 3 s for a clean exit (covers the max sleep interval)
+        if _QT and hasattr(reader, 'wait'):
+            reader.wait(3000)
         _emit(self.ports_changed, list(self._readers.keys()))
 
     def close_all(self) -> None:

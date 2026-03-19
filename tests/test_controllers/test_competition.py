@@ -157,7 +157,6 @@ class TestProcessSICardNoQt:
         ctrl.new_event("E")
         si = self._make_si(999999)
         ctrl.on_card_read(SICardReadEvent(card=si, port="TEST"))
-        # Card should be stored even though no runner matches
         assert any(c.card_number == 999999 for c in ctrl.event.cards.values())
 
     def test_known_card_evaluates_runner(self):
@@ -195,29 +194,49 @@ class TestProcessSICardNoQt:
 
 @qt_only
 class TestSignalsQt:
+    """
+    These tests require a real QApplication and real Qt signals.
+    The controller is created inside each test so it is owned by the
+    QApplication thread and signals work correctly with qtbot.waitSignal.
+    """
+
     def test_new_event_emits_signal(self, qtbot):
         ctrl = _make_ctrl()
-        with qtbot.waitSignal(ctrl.event_loaded, timeout=1000):
-            ctrl.new_event("Test")
+        # waitSignal works only with real PySide6 signals
+        received = []
+        ctrl.event_loaded.connect(lambda: received.append(1))
+        ctrl.new_event("Test")
+        qtbot.wait(100)
+        assert len(received) == 1
 
     def test_status_emits_runner_updated(self, qtbot):
         ctrl = _make_ctrl()
         ctrl.new_event("E")
         cls = ctrl.event.add_class("M21")
         r = ctrl.event.add_runner("X", "Y", class_id=cls.id)
-        with qtbot.waitSignal(ctrl.runner_updated, timeout=1000):
-            ctrl.set_runner_status(r.id, RunnerStatus.OK)
+        received = []
+        ctrl.runner_updated.connect(lambda rid: received.append(rid))
+        ctrl.set_runner_status(r.id, RunnerStatus.OK)
+        qtbot.wait(100)
+        assert r.id in received
 
     def test_card_processed_signal_unknown(self, qtbot):
         ctrl = _make_ctrl()
         ctrl.new_event("E")
-        si = SICard(); si.card_number = 999999
+        received = []
+        ctrl.card_processed.connect(lambda cid: received.append(cid))
+        si = SICard()
+        si.card_number = 999999
         ev = SICardReadEvent(card=si, port="TEST")
-        with qtbot.waitSignal(ctrl.card_processed, timeout=1000):
-            ctrl.on_card_read(ev)
+        ctrl.on_card_read(ev)
+        qtbot.wait(100)
+        assert len(received) == 1
 
     def test_save_emits_event_saved(self, qtbot):
         ctrl = _make_ctrl()
         ctrl.new_event("Saved")
-        with qtbot.waitSignal(ctrl.event_saved, timeout=1000):
-            ctrl.save_event_to_db()
+        received = []
+        ctrl.event_saved.connect(lambda: received.append(1))
+        ctrl.save_event_to_db()
+        qtbot.wait(100)
+        assert len(received) == 1
