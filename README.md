@@ -227,6 +227,5 @@ parse_time("1:30") == 900
 ---
 
 ## Licence
-
-GNU General Public License v3 – same as the original MeOS.  
+GNU Affero General Public License v3.0 – same as the original MeOS.  
 Original C++ code © 2009–2026 Melin Software HB.
