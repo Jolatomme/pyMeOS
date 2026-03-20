@@ -34,7 +34,7 @@ from views.tabs.tab_speaker     import TabSpeaker
 from views.tabs.tab_auto        import TabAuto
 
 APP_TITLE   = "PyMeOS – Orienteering Software"
-APP_VERSION = "5.0.0"
+APP_VERSION = "0.0.1"
 
 # File-dialog filter strings used in multiple places
 _OPEN_FILTER = "MeOS XML (*.meosxml *.mexml *.xml);;All Files (*)"
