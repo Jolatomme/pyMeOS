@@ -41,12 +41,7 @@ if _gnome_rule not in _existing_rules:
     )
 
 # High-DPI rounding policy must be set before QApplication is instantiated.
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication
-
-QApplication.setHighDpiScaleFactorRoundingPolicy(
-    Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
-)
+# However, QApplication may not exist yet at import time, so we defer to main()
 
 from views.main_window import MainWindow
 
@@ -78,10 +73,26 @@ def main() -> int:
     from persistence import init_db
     init_db(args.db)
 
-    app = QApplication(sys.argv)
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QApplication
+
+    # Set high-DPI policy before creating QApplication
+    QApplication.setHighDpiScaleFactorRoundingPolicy(
+        Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
+    )
+
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
     app.setApplicationName("PyMeOS")
     app.setApplicationVersion("5.0.0")
     app.setOrganizationName("PyMeOS Community")
+
+    # Load stylesheet
+    stylesheet_path = PROJECT_ROOT / "resources" / "styles" / "default.qss"
+    if stylesheet_path.exists():
+        with open(stylesheet_path, "r") as f:
+            app.setStyleSheet(f.read())
 
     window = MainWindow(db_url=args.db)
     window.show()

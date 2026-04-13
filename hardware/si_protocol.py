@@ -183,16 +183,17 @@ def decode_si_time(high_byte: int, low_bytes: int, sub_second: int = 0,
 
 def build_wakeup_frame() -> bytes:
     """Build the initial WAKEUP + STX + identify frame."""
+    # Frame format: STX, cmd, len, data, CRC_hi, CRC_lo, ETX
     frame = bytearray([
-        WAKEUP, STX, STX,
-        0xF0,   # cmd
-        0x01,   # len
-        0x4D,   # data
-        0x00, 0x00,  # CRC placeholder
-        ETX
+        STX,        # start marker
+        0xF0,       # command
+        0x01,       # length (1 data byte)
+        0x4D,       # data byte
+        0x00, 0x00, # CRC placeholder (2 bytes)
+        ETX         # end marker
     ])
-    set_crc(frame[2:])
-    return bytes(frame)
+    set_crc(frame[1:])  # CRC computed for cmd...data (excluding leading STX, excluding trailing ETX)
+    return bytes([WAKEUP] + list(frame))  # prepend WAKEUP
 
 
 def build_get_system_request(address: int = 0x70, count: int = 6) -> bytes:
