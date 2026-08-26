@@ -14,7 +14,7 @@ from PySide6.QtCore import Qt, QDate
 from PySide6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
     QFormLayout, QGroupBox, QLineEdit, QDateEdit,
-    QFileDialog, QMessageBox,
+    QFileDialog, QMessageBox, QInputDialog,
 )
 
 from utils.icon_utils import get_icon
@@ -97,7 +97,7 @@ class TabCompetition(TabBase):
     # ------------------------------------------------------------------
 
     def _on_new(self):
-        name, ok = QMessageBox.getText(
+        name, ok = QInputDialog.getText(
             self, "New Competition", "Competition name:")
         if ok and name:
             self.ctrl.new_event(name)
