@@ -33,6 +33,7 @@ class TabSI(TabBase):
         self._reader.ports_changed.connect(self._on_ports_changed)
 
         self._build_ui()
+        self.ctrl.event_loaded.connect(self.load_page)
 
     # ------------------------------------------------------------------
     # UI construction
@@ -103,6 +104,14 @@ class TabSI(TabBase):
     # ------------------------------------------------------------------
     # Port management
     # ------------------------------------------------------------------
+
+    def load_page(self) -> None:
+        """Load page data when tab is activated."""
+        self._refresh_ports()
+        if self._reader.has_open_port():
+            self._lbl_status.setText("Station connected.")
+        else:
+            self._lbl_status.setText("No station connected.")
 
     def _refresh_ports(self):
         ports = self._reader.list_serial_ports()

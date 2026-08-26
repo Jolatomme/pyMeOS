@@ -83,7 +83,7 @@ class TabCompetition(TabBase):
     def load_page(self) -> None:
         ev = self.ctrl.event
         self._name_edit.setText(ev.name)
-        self._date_edit.setDate(QtCore.QDate.fromString(ev.date, "yyyy-MM-dd")) if ev.date else QtCore.QDate.currentDate()
+        self._date_edit.setDate(QDate.fromString(ev.date, "yyyy-MM-dd")) if ev.date else QDate.currentDate()
         self._org_edit.setText(ev.organiser)
         self._country_edit.setText(ev.country)
 
