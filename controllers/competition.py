@@ -172,7 +172,7 @@ class CompetitionController(QObject):
     def on_card_read(self, ev: SICard) -> None:
         """Slot: called when the SI reader emits a new card."""
         si_card = ev
-        logger.info("Card read: %d from %s", si_card.card_number, ev.port)
+        logger.info("Card read: %d from %s", si_card.card_number, "SI Station")
 
         # 1. Find the domain card or create a new one
         domain_card = DomainCard.from_si_card(si_card, self._event)
