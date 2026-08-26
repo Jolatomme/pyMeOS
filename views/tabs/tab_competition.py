@@ -10,7 +10,7 @@ Features:
 """
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QDate
 from PySide6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
     QFormLayout, QGroupBox, QLineEdit, QDateEdit,
@@ -83,7 +83,7 @@ class TabCompetition(TabBase):
     def load_page(self) -> None:
         ev = self.ctrl.event
         self._name_edit.setText(ev.name)
-        self._date_edit.setDate(ev.date)
+        self._date_edit.setDate(QtCore.QDate.fromString(ev.date, "yyyy-MM-dd")) if ev.date else QtCore.QDate.currentDate()
         self._org_edit.setText(ev.organiser)
         self._country_edit.setText(ev.country)
 
