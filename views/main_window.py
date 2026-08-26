@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QMenu, QFileDialog, QMessageBox, QInputDialog,
     QApplication, QToolBar, QLabel,
 )
-from PySide6.QtGui import QAction, QIcon
+from PySide6.QtGui import QAction, QIcon, QKeySequence
 
 from controllers.competition import CompetitionController
 from hardware.si_reader import SIReaderManager
