@@ -292,12 +292,12 @@ class MainWindow(QMainWindow):
     def _action_about(self):
         QMessageBox.about(
             self, "About PyMeOS",
-            f"<h2>{APP_TITLE}</h2>
-            <p>Version {APP_VERSION}</p>
-            <p>A cross-platform orienteering event management system.</p>
-            <p>Python port of MeOS by Melin Software HB.</p>
-            <p><a href='https://github.com/Jolatomme/pyMeOS'>GitHub</a></p>")
-
+            f"<h2>{APP_TITLE}</h2>\n"
+            f"<p>Version {APP_VERSION}</p>\n"
+            "<p>A cross-platform orienteering event management system.</p>\n"
+            "<p>Python port of MeOS by Melin Software HB.</p>\n"
+            "<p><a href='https://github.com/Jolatomme/pyMeOS'>GitHub</a></p>"
+        )
     # ------------------------------------------------------------------
     # SI card handling
     # ------------------------------------------------------------------
