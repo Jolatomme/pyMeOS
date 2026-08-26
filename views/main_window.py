@@ -304,7 +304,7 @@ class MainWindow(QMainWindow):
 
     def _on_card_received(self, ev):
         self._ctrl.on_card_read(ev)
-        self._lbl_si.setText(f"SI: Card {ev.card.card_number} read")
+        self._lbl_si.setText(f"SI: Card {ev.card_number} read")
 
     def _on_si_error(self, port: str, message: str):
         self._show_status(f"SI Error [{port}]: {message}")

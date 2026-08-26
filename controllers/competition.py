@@ -46,7 +46,7 @@ except ImportError:
 
 from models import Event, Runner, Card, RunnerStatus
 from models.card import SICard, Card as DomainCard
-from hardware.si_reader import SICardReadEvent, SIPunchEvent
+from hardware.si_reader import SICard, SIPunchEvent
 from controllers.result import evaluate_card, compute_class_results
 from persistence import EventRepository, init_db
 from utils.time_utils import NO_TIME
@@ -169,9 +169,9 @@ class CompetitionController(QObject):
     # SI card handling
     # ------------------------------------------------------------------
 
-    def on_card_read(self, ev: SICardReadEvent) -> None:
+    def on_card_read(self, ev: SICard) -> None:
         """Slot: called when the SI reader emits a new card."""
-        si_card = ev.card
+        si_card = ev
         logger.info("Card read: %d from %s", si_card.card_number, ev.port)
 
         # 1. Find the domain card or create a new one
@@ -213,7 +213,7 @@ class CompetitionController(QObject):
     def on_punch_received(self, ev: SIPunchEvent) -> None:
         """Slot: called when a pass-through punch arrives."""
         logger.debug("Punch: card=%d code=%d time=%d",
-                     ev.card_number, ev.code, ev.time)
+                     ev_number, ev.code, ev.time)
         # Store as free punch (partial implementation)
         self._event._notify("punch_received", ev)
 

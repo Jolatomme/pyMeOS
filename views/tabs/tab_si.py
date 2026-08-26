@@ -108,7 +108,7 @@ class TabSI(TabBase):
     def load_page(self) -> None:
         """Load page data when tab is activated."""
         self._refresh_ports()
-        if self._reader.has_open_port():
+        if self._reader._ports:
             self._lbl_status.setText("Station connected.")
         else:
             self._lbl_status.setText("No station connected.")
