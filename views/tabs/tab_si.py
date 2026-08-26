@@ -4,10 +4,10 @@ views/tabs/tab_si.py
 SportIdent card reader control tab (TabSI equivalent).
 
 Features:
-  • Open / close serial ports
-  • Display live card reads in a log
-  • Manual card entry
-  • Test card injection
+   Open / close serial ports
+   Display live card reads in a log
+   Manual card entry
+   Test card injection
 """
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ from PySide6.QtGui import QColor, QTextCharFormat, QTextCursor
 
 from hardware.si_reader import SIReaderManager as SIReader, SICardReadEvent, SIPunchEvent
 from utils.time_utils import format_time
+from utils.icon_utils import get_icon
 from .tab_base import TabBase
 
 
@@ -51,9 +52,9 @@ class TabSI(TabBase):
         pg.addRow("Port:", self._port_combo)
 
         btn_row = QHBoxLayout()
-        self._btn_open   = QPushButton("Open")
-        self._btn_close  = QPushButton("Close")
-        self._btn_refresh= QPushButton("↻ Refresh")
+        self._btn_open   = QPushButton(get_icon("si/usb"),   "Open")
+        self._btn_close  = QPushButton(get_icon("si/usb_off"), "Close")
+        self._btn_refresh= QPushButton(get_icon("actions/refresh"), "Refresh")
         self._btn_open.clicked.connect(self._open_port)
         self._btn_close.clicked.connect(self._close_port)
         self._btn_refresh.clicked.connect(self._refresh_ports)
@@ -79,7 +80,7 @@ class TabSI(TabBase):
         self._log.setFontFamily("Monospace")
         lg.addWidget(self._log)
 
-        clear_btn = QPushButton("Clear Log")
+        clear_btn = QPushButton(get_icon("actions/clear_log"), "Clear Log")
         clear_btn.clicked.connect(self._log.clear)
         lg.addWidget(clear_btn)
         layout.addWidget(log_grp)
@@ -94,114 +95,65 @@ class TabSI(TabBase):
         tg.addWidget(QLabel("Card no:"))
         tg.addWidget(self._spin_card)
 
-        self._btn_test = QPushButton("Inject Test Card")
+        self._btn_test = QPushButton(get_icon("si/test_card"), "Inject Test Card")
         self._btn_test.clicked.connect(self._inject_test)
         tg.addWidget(self._btn_test)
 
         layout.addWidget(test_grp)
 
     # ------------------------------------------------------------------
-    # TabBase interface
-    # ------------------------------------------------------------------
-
-    def load_page(self):
-        self._refresh_ports()
-
-    def clear_competition_data(self):
-        self._log.clear()
-
-    # ------------------------------------------------------------------
-    # Slots
-    # ------------------------------------------------------------------
-
-    @Slot(object)
-    def _on_card_read(self, si_card):
-        """Called when SIReaderManager emits card_received (SICard object)."""
-        self._log_line(
-            f"[CARD]  {si_card.card_number:>8}  "
-            f"start={format_time(si_card.start_punch.time)}  "
-            f"finish={format_time(si_card.finish_punch.time)}  "
-            f"punches={len(si_card.punches)}",
-            color="#00aa00",
-        )
-        # Forward to competition controller
-        ev = SICardReadEvent(card=si_card, port=self._current_port())
-        self.ctrl.on_card_read(ev)
-
-    @Slot(str, str)
-    def _on_si_error(self, port: str, msg: str):
-        self._lbl_status.setText(f"{port}: {msg}")
-        self._log_line(f"[ERROR]  {port}: {msg}", color="#cc0000")
-
-    @Slot(list)
-    def _on_ports_changed(self, ports: list):
-        if ports:
-            self._lbl_status.setText(f"Open ports: {', '.join(ports)}")
-        else:
-            self._lbl_status.setText("No station connected.")
-
-    # ------------------------------------------------------------------
-    # Actions
+    # Port management
     # ------------------------------------------------------------------
 
     def _refresh_ports(self):
+        ports = self._reader.list_serial_ports()
         self._port_combo.clear()
-        self._port_combo.addItem("TEST")
-        for p in SIReader.list_serial_ports():
-            self._port_combo.addItem(p)
+        for p in ports:
+            self._port_combo.addItem(p, p)
+        # Add TEST mode
+        self._port_combo.addItem("TEST (Simulation)", "TEST")
 
     def _open_port(self):
-        port = self._port_combo.currentText().strip()
-        test_mode = (port.upper() == "TEST")
-        if self._reader.open_port(port, test_mode=test_mode):
-            self._log_line(f"[INFO] Opening {port}…", "#888888")
+        port = self._port_combo.currentData()
+        if not port:
+            return
+        if port == "TEST":
+            self._reader.open_port("TEST", test_mode=True)
+            self._lbl_status.setText("Test mode active (simulation).")
         else:
-            self._log_line(f"[ERROR] Cannot open {port}", "#cc0000")
+            self._reader.open_port(port)
+            self._lbl_status.setText(f"Connected to {port}.")
 
     def _close_port(self):
-        port = self._port_combo.currentText().strip()
-        self._reader.close_port(port)
-        self._log_line(f"[INFO] {port} closed.", "#888888")
+        self._reader.close_all()
+        self._lbl_status.setText("No station connected.")
 
-    def _current_port(self) -> str:
-        ports = self._reader.open_ports
-        return ports[0] if ports else ""
+    def _on_ports_changed(self):
+        self._refresh_ports()
 
-    def _inject_test(self):
-        card_no = self._spin_card.value()
-        # Ensure TEST port is open
-        if "TEST" not in self._reader.open_ports:
-            self._reader.open_port("TEST", test_mode=True)
+    # ------------------------------------------------------------------
+    # Card handling
+    # ------------------------------------------------------------------
 
-        ev = self.ctrl.event
-        punches = []
-        for course in ev.courses.values():
-            if not course.removed:
-                for cid in course.control_ids[:10]:
-                    ctrl = ev.controls.get(cid)
-                    if ctrl and ctrl.numbers:
-                        punches.append(ctrl.numbers[0])
-                break
+    @Slot
+    def _on_card_read(self, ev: SICardReadEvent):
+        card = ev.card
+        self._log.append(f"Card {card.card_number} read from {ev.port}")
+        self._log.append(f"  Start: {format_time(card.get_start_time())}")
+        self._log.append(f"  Finish: {format_time(card.get_finish_time())}")
+        self._log.append(f"  Punches: {len(card.punches)}")
+        self._log.append("")
 
-        # Build a synthetic SICard and inject it directly
-        from models.card import SICard
-        from models.punch import SIPunch
-        from utils.time_utils import encode
-        si = SICard()
-        si.card_number  = card_no
-        si.start_punch  = SIPunch(code=1, time=encode(3600))
-        si.finish_punch = SIPunch(code=2, time=encode(3600 + 1800))
-        for i, code in enumerate(punches):
-            si.punches.append(SIPunch(code=code, time=encode(3660 + i * 60)))
-
-        read_ev = SICardReadEvent(card=si, port="TEST")
-        self._on_card_read(si)
-
-    def _log_line(self, text: str, color: str = "#000000"):
-        fmt = QTextCharFormat()
-        fmt.setForeground(QColor(color))
+        # Scroll to bottom
         cursor = self._log.textCursor()
         cursor.movePosition(QTextCursor.End)
-        cursor.insertText(text + "\n", fmt)
         self._log.setTextCursor(cursor)
-        self._log.ensureCursorVisible()
+
+    @Slot
+    def _on_si_error(self, port: str, message: str):
+        self._log.append(f"ERROR [{port}]: {message}")
+
+    def _inject_test(self):
+        card_number = self._spin_card.value()
+        self._reader.emit_test_card(card_number)
+        self._log.append(f"Test card {card_number} injected.")

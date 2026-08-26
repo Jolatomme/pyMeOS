@@ -17,10 +17,11 @@ from PySide6.QtWidgets import (
     QMenu, QFileDialog, QMessageBox, QInputDialog,
     QApplication, QToolBar, QLabel,
 )
-from PySide6.QtGui import QAction, QIcon, QKeySequence
+from PySide6.QtGui import QAction, QIcon
 
 from controllers.competition import CompetitionController
 from hardware.si_reader import SIReaderManager
+from utils.icon_utils import get_icon
 from views.tabs.tab_competition import TabCompetition
 from views.tabs.tab_runner      import TabRunner
 from views.tabs.tab_team        import TabTeam
@@ -33,7 +34,7 @@ from views.tabs.tab_results     import TabResults
 from views.tabs.tab_speaker     import TabSpeaker
 from views.tabs.tab_auto        import TabAuto
 
-APP_TITLE   = "PyMeOS – Orienteering Software"
+APP_TITLE   = "PyMeOS  Orienteering Software"
 APP_VERSION = "0.0.1"
 
 # File-dialog filter strings used in multiple places
@@ -45,18 +46,18 @@ class MainWindow(QMainWindow):
     def __init__(self, db_url: str = "sqlite:///pymeos.db") -> None:
         super().__init__()
 
-        # ── Controller & hardware ──────────────────────────────────────
+        #  Controller & hardware 
         self._ctrl     = CompetitionController(parent=self)
         self._si_mgr   = SIReaderManager(parent=self)
 
-        # Connect SI reader → controller
+        # Connect SI reader  controller
         self._si_mgr.card_received.connect(self._on_card_received)
         self._si_mgr.error.connect(self._on_si_error)
 
-        # Connect controller messages → status bar
+        # Connect controller messages  status bar
         self._ctrl.status_message.connect(self._show_status)
 
-        # ── Window chrome ──────────────────────────────────────────────
+        #  Window chrome 
         self.setWindowTitle(APP_TITLE)
         self.resize(1200, 800)
 
@@ -65,7 +66,7 @@ class MainWindow(QMainWindow):
         self._build_tabs()
         self._build_statusbar()
 
-        # ── Auto-save timer (every 5 min) ─────────────────────────────
+        #  Auto-save timer (every 5 min) 
         self._autosave_timer = QTimer(self)
         self._autosave_timer.timeout.connect(self._autosave)
         self._autosave_timer.start(5 * 60 * 1000)
@@ -79,22 +80,22 @@ class MainWindow(QMainWindow):
 
         # File menu
         file_menu = mb.addMenu("&File")
-        act_new    = QAction("&New Competition", self,
+        act_new    = QAction(get_icon("general/new"), "&New Competition", self,
                              shortcut=QKeySequence.New,
                              triggered=self._action_new)
-        act_open   = QAction("&Open…", self,
+        act_open   = QAction(get_icon("general/open"), "&Open...", self,
                              shortcut=QKeySequence.Open,
                              triggered=self._action_open)
-        act_save   = QAction("&Save", self,
+        act_save   = QAction(get_icon("general/save"), "&Save", self,
                              shortcut=QKeySequence.Save,
                              triggered=self._action_save)
-        act_saveas = QAction("Save &As…", self,
+        act_saveas = QAction(get_icon("general/save_as"), "Save &As...", self,
                              triggered=self._action_save_as)
-        act_import_iof = QAction("Import IOF XML 3.0…", self,
+        act_import_iof = QAction("Import IOF XML 3.0...", self,
                                  triggered=self._action_import_iof)
-        act_export_iof = QAction("Export IOF XML 3.0…", self,
+        act_export_iof = QAction("Export IOF XML 3.0...", self,
                                  triggered=self._action_export_iof)
-        act_quit   = QAction("&Quit", self,
+        act_quit   = QAction(get_icon("general/quit"), "&Quit", self,
                              shortcut=QKeySequence.Quit,
                              triggered=self.close)
 
@@ -111,34 +112,34 @@ class MainWindow(QMainWindow):
         # Competition menu
         comp_menu = mb.addMenu("&Competition")
         comp_menu.addAction(QAction(
-            "Recalculate All Results", self,
+            get_icon("actions/calculate"), "Recalculate All Results", self,
             triggered=self._action_recalc))
         comp_menu.addAction(QAction(
-            "Draw Start Times…", self,
+            get_icon("actions/draw"), "Draw Start Times...", self,
             triggered=self._action_draw))
 
         # SI menu
         si_menu = mb.addMenu("&SI Reader")
         si_menu.addAction(QAction(
-            "Open Port…", self, triggered=self._action_open_port))
+            get_icon("si/usb"), "Open Port...", self, triggered=self._action_open_port))
         si_menu.addAction(QAction(
-            "Close All Ports", self, triggered=self._si_mgr.close_all))
+            get_icon("si/usb_off"), "Close All Ports", self, triggered=self._si_mgr.close_all))
         si_menu.addAction(QAction(
-            "Test Mode (simulation)", self, triggered=self._action_test_si))
+            get_icon("si/test_card"), "Test Mode (simulation)", self, triggered=self._action_test_si))
 
         # Help menu
         help_menu = mb.addMenu("&Help")
         help_menu.addAction(QAction(
-            "About…", self, triggered=self._action_about))
+            get_icon("general/about"), "About...", self, triggered=self._action_about))
 
     def _build_toolbar(self):
         tb = self.addToolBar("Main")
         tb.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
-        tb.addAction(QAction("New",  self, triggered=self._action_new))
-        tb.addAction(QAction("Open", self, triggered=self._action_open))
-        tb.addAction(QAction("Save", self, triggered=self._action_save))
+        tb.addAction(QAction(get_icon("general/new"), "New",  self, triggered=self._action_new))
+        tb.addAction(QAction(get_icon("general/open"), "Open", self, triggered=self._action_open))
+        tb.addAction(QAction(get_icon("general/save"), "Save", self, triggered=self._action_save))
         tb.addSeparator()
-        tb.addAction(QAction("Recalculate", self,
+        tb.addAction(QAction(get_icon("actions/calculate"), "Recalculate", self,
                              triggered=self._action_recalc))
 
     def _build_tabs(self):
@@ -148,21 +149,24 @@ class MainWindow(QMainWindow):
 
         ctrl = self._ctrl
 
-        def add(widget, label: str):
-            self._tabs.addTab(widget, label)
+        def add(widget, label: str, icon_name: str = ""):
+            if icon_name:
+                self._tabs.addTab(widget, get_icon(icon_name), label)
+            else:
+                self._tabs.addTab(widget, label)
             return widget
 
-        self._tab_competition = add(TabCompetition(ctrl), "Competition")
-        self._tab_runner      = add(TabRunner(ctrl),      "Runners")
-        self._tab_team        = add(TabTeam(ctrl),        "Teams")
-        self._tab_class       = add(TabClass(ctrl),       "Classes")
-        self._tab_course      = add(TabCourse(ctrl),      "Courses")
-        self._tab_control     = add(TabControl(ctrl),     "Controls")
-        self._tab_club        = add(TabClub(ctrl),        "Clubs")
-        self._tab_si          = add(TabSI(ctrl),          "SI Cards")
-        self._tab_results     = add(TabResults(ctrl),     "Results")
-        self._tab_speaker     = add(TabSpeaker(ctrl),     "Speaker")
-        self._tab_auto        = add(TabAuto(ctrl),        "Automation")
+        self._tab_competition = add(TabCompetition(ctrl), "Competition", "competition/runner")
+        self._tab_runner      = add(TabRunner(ctrl),      "Runners", "competition/runner")
+        self._tab_team        = add(TabTeam(ctrl),        "Teams", "competition/team")
+        self._tab_class       = add(TabClass(ctrl),       "Classes", "competition/class")
+        self._tab_course      = add(TabCourse(ctrl),      "Courses", "competition/course")
+        self._tab_control     = add(TabControl(ctrl),     "Controls", "competition/control")
+        self._tab_club        = add(TabClub(ctrl),        "Clubs", "competition/club")
+        self._tab_si          = add(TabSI(ctrl),          "SI Cards", "si/card")
+        self._tab_results     = add(TabResults(ctrl),     "Results", "competition/results")
+        self._tab_speaker     = add(TabSpeaker(ctrl),     "Speaker", "competition/speaker")
+        self._tab_auto        = add(TabAuto(ctrl),        "Automation", "general/settings")
 
         # Refresh active tab on switch
         self._tabs.currentChanged.connect(self._on_tab_changed)
@@ -171,7 +175,7 @@ class MainWindow(QMainWindow):
         self._status_bar = QStatusBar()
         self.setStatusBar(self._status_bar)
         self._lbl_status = QLabel("Ready")
-        self._lbl_si     = QLabel("SI: –")
+        self._lbl_si     = QLabel("SI: ")
         self._status_bar.addWidget(self._lbl_status, 1)
         self._status_bar.addPermanentWidget(self._lbl_si)
 
@@ -256,108 +260,72 @@ class MainWindow(QMainWindow):
 
     def _action_recalc(self):
         self._ctrl.recalculate_all_results()
-        self._show_status("Results recalculated.")
-        current = self._tabs.currentWidget()
-        if isinstance(current, TabResults):
-            current.load_page()
 
     def _action_draw(self):
-        """Simple draw dialog – full implementation in TabClass."""
-        self._tabs.setCurrentWidget(self._tab_class)
+        # Simplified: draw starts for first class
+        classes = [c for c in self._ctrl.event.classes.values() if not c.removed]
+        if not classes:
+            QMessageBox.information(self, "Draw", "No classes defined.")
+            return
+        
+        class_id = classes[0].id
+        first_start = 0  # 00:00:00 in internal units
+        interval = 600   # 1 minute in internal units (0.1s units)
+        self._ctrl.draw_starts(class_id, first_start, interval, scramble=True)
 
     # ------------------------------------------------------------------
-    # SI reader actions
+    # SI menu actions
     # ------------------------------------------------------------------
 
     def _action_open_port(self):
-        available = SIReaderManager.list_serial_ports()
-        choices   = available + ["TEST"]
-        if not choices:
-            QMessageBox.information(self, "No Ports",
-                                    "No serial ports found.")
-            return
-        port, ok = QInputDialog.getItem(
-            self, "Open SI Port", "Select port:", choices, 0, False)
-        if ok and port:
-            test_mode = (port == "TEST")
-            if self._si_mgr.open_port(port, test_mode=test_mode):
-                self._lbl_si.setText(f"SI: {port}")
-                self._show_status(f"SI port {port} opened.")
-            else:
-                QMessageBox.warning(self, "Port Error",
-                                    f"Could not open {port}.")
+        # Handled by TabSI
+        pass
 
     def _action_test_si(self):
         self._si_mgr.open_port("TEST", test_mode=True)
-        self._lbl_si.setText("SI: TEST")
-        self._show_status("SI test mode active.")
-
-    def _on_card_received(self, si_card):
-        """Route incoming SI card to the controller."""
-        from hardware.si_reader import SICardReadEvent
-        port = (self._si_mgr.open_ports[0]
-                if self._si_mgr.open_ports else "")
-        self._ctrl.on_card_read(SICardReadEvent(card=si_card, port=port))
-        if isinstance(self._tabs.currentWidget(), TabSI):
-            self._tabs.currentWidget().load_page()
-
-    def _on_si_error(self, port: str, msg: str):
-        self._show_status(f"SI error on {port}: {msg}")
+        self._show_status("Test mode active (simulation).")
 
     # ------------------------------------------------------------------
-    # Help
+    # Help menu actions
     # ------------------------------------------------------------------
 
     def _action_about(self):
         QMessageBox.about(
-            self, f"About {APP_TITLE}",
-            f"<h2>PyMeOS {APP_VERSION}</h2>"
-            "<p>Cross-platform orienteering event management software.</p>"
-            "<p>Python/PySide6 port of MeOS (Melin Software HB).</p>"
-            "<p>Licensed under GPL v3.</p>",
-        )
+            self, "About PyMeOS",
+            f"<h2>{APP_TITLE}</h2>
+            <p>Version {APP_VERSION}</p>
+            <p>A cross-platform orienteering event management system.</p>
+            <p>Python port of MeOS by Melin Software HB.</p>
+            <p><a href='https://github.com/Jolatomme/pyMeOS'>GitHub</a></p>")
 
     # ------------------------------------------------------------------
-    # Housekeeping
+    # SI card handling
+    # ------------------------------------------------------------------
+
+    def _on_card_received(self, ev):
+        self._ctrl.on_card_read(ev)
+        self._lbl_si.setText(f"SI: Card {ev.card.card_number} read")
+
+    def _on_si_error(self, port: str, message: str):
+        self._show_status(f"SI Error [{port}]: {message}")
+
+    # ------------------------------------------------------------------
+    # Status bar
     # ------------------------------------------------------------------
 
     def _show_status(self, msg: str):
         self._lbl_status.setText(msg)
-        self._status_bar.showMessage(msg, 5000)
 
-    def _autosave(self):
-        if self._ctrl.event and self._ctrl.event.current_file:
-            self._ctrl.save_event_to_xml(self._ctrl.event.current_file)
+    # ------------------------------------------------------------------
+    # Refresh
+    # ------------------------------------------------------------------
 
     def _refresh_all_tabs(self):
         for i in range(self._tabs.count()):
-            w = self._tabs.widget(i)
-            if hasattr(w, "clear_competition_data"):
-                w.clear_competition_data()
-        w = self._tabs.currentWidget()
-        if hasattr(w, "load_page"):
-            w.load_page()
+            widget = self._tabs.widget(i)
+            if hasattr(widget, "load_page"):
+                widget.load_page()
 
-    def closeEvent(self, event):
-        ev       = self._ctrl.event
-        has_file = bool(ev and ev.current_file)
-        has_data = bool(ev and ev.data_revision > 0)
-
-        if has_file and has_data:
-            reply = QMessageBox.question(
-                self, "Quit",
-                "Save before quitting?",
-                QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
-            )
-            if reply == QMessageBox.Cancel:
-                event.ignore()
-                return
-            if reply == QMessageBox.Yes:
-                self._action_save()
-
-        self._si_mgr.close_all()
-        event.accept()
-
-    def recalculate_all_results(self):
-        """Public API used by TabAuto etc."""
-        self._action_recalc()
+    def _autosave(self):
+        if self._ctrl.event.current_file:
+            self._ctrl.save_event_to_xml(self._ctrl.event.current_file)

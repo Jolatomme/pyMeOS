@@ -1,12 +1,12 @@
 """
 views/tabs/tab_team.py
-======================
-Relay team management tab (TabTeam equivalent).
+=====================
+Team management tab (TabTeam equivalent).
 
 Features:
-  • Table of all teams with per-leg runner assignments
-  • Add / Edit / Delete team dialogs
-  • Leg runner assignment
+   Table of all teams (sortable)
+   Add / Edit / Delete team dialog
+   Team member management
 """
 from __future__ import annotations
 
@@ -14,18 +14,17 @@ from PySide6.QtCore import Qt, QSortFilterProxyModel
 from PySide6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QPushButton, QTableView,
     QLineEdit, QLabel, QComboBox, QHeaderView, QMessageBox,
-    QDialog, QFormLayout, QDialogButtonBox, QSpinBox,
-    QGroupBox, QScrollArea, QWidget,
+    QDialog, QFormLayout, QDialogButtonBox,
 )
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
-from models import RunnerStatus, Team
-from utils.time_utils import format_time, NO_TIME
+from models import Team
+from utils.icon_utils import get_icon
 from .tab_base import TabBase
 
 
 class TeamTableModel(QStandardItemModel):
-    COLUMNS = ["#", "Name", "Club", "Class", "Status", "Total Time", "Place"]
+    COLUMNS = ["#", "Name", "Club", "Class", "Members", "Card"]
 
     def __init__(self, parent=None):
         super().__init__(0, len(self.COLUMNS), parent)
@@ -36,15 +35,13 @@ class TeamTableModel(QStandardItemModel):
         for t in teams:
             club = event.clubs.get(t.club_id)
             cls  = event.classes.get(t.class_id)
-            tt   = t.t_total_time
             row = [
-                QStandardItem(str(t.start_no)),
+                QStandardItem(str(t.id)),
                 QStandardItem(t.name),
                 QStandardItem(club.name if club else ""),
                 QStandardItem(cls.name  if cls  else ""),
-                QStandardItem(t.status.to_code()),
-                QStandardItem(format_time(tt) if tt != NO_TIME else ""),
-                QStandardItem(str(t.place) if t.place else ""),
+                QStandardItem(str(len(t.members))),
+                QStandardItem(str(t.card_number) if t.card_number else ""),
             ]
             for item in row:
                 item.setData(t.id, Qt.UserRole)
@@ -57,180 +54,164 @@ class TabTeam(TabBase):
         super().__init__(controller, parent)
         self._build_ui()
         self.ctrl.event_loaded.connect(self.load_page)
-        self.ctrl.runner_updated.connect(lambda _: self._refresh_table())
+
+    # ------------------------------------------------------------------
+    # UI construction
+    # ------------------------------------------------------------------
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
 
-        # Toolbar
+        # ---- Toolbar ---------------------------------------------------
         toolbar = QHBoxLayout()
+
         self._search = QLineEdit()
-        self._search.setPlaceholderText("Search team name…")
+        self._search.setPlaceholderText("Search team...")
         self._search.textChanged.connect(self._apply_filter)
         toolbar.addWidget(QLabel("Search:"))
         toolbar.addWidget(self._search)
 
-        self._class_combo = QComboBox()
-        self._class_combo.addItem("All classes", 0)
-        self._class_combo.currentIndexChanged.connect(self._apply_filter)
-        toolbar.addWidget(QLabel("Class:"))
-        toolbar.addWidget(self._class_combo)
         toolbar.addStretch()
 
-        self._btn_add    = QPushButton("Add Team")
-        self._btn_edit   = QPushButton("Edit")
-        self._btn_delete = QPushButton("Delete")
+        self._btn_add    = QPushButton(get_icon("actions/add"),    "Add Team")
+        self._btn_edit   = QPushButton(get_icon("actions/edit"),   "Edit")
+        self._btn_delete = QPushButton(get_icon("actions/delete"), "Delete")
         self._btn_add.clicked.connect(self._add_team)
         self._btn_edit.clicked.connect(self._edit_team)
         self._btn_delete.clicked.connect(self._delete_team)
         for btn in (self._btn_add, self._btn_edit, self._btn_delete):
             toolbar.addWidget(btn)
+
         layout.addLayout(toolbar)
 
-        # Table
+        # ---- Table ------------------------------------------------------
+        self._table = QTableView()
+        self._table.setSelectionBehavior(QTableView.SelectRows)
+        self._table.setSelectionMode(QTableView.SingleSelection)
+        self._table.setSortingEnabled(True)
+        self._table.horizontalHeader().setStretchLastSection(True)
+        self._table.verticalHeader().setVisible(False)
+        self._table.setAlternatingRowColors(True)
+
         self._model = TeamTableModel(self)
         self._proxy = QSortFilterProxyModel(self)
         self._proxy.setSourceModel(self._model)
-        self._proxy.setFilterCaseSensitivity(Qt.CaseInsensitive)
-        self._proxy.setFilterKeyColumn(-1)
-
-        self._table = QTableView()
         self._table.setModel(self._proxy)
-        self._table.setSortingEnabled(True)
-        self._table.setSelectionBehavior(QTableView.SelectRows)
-        self._table.setAlternatingRowColors(True)
-        self._table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self._table.doubleClicked.connect(self._edit_team)
+
         layout.addWidget(self._table)
 
-        self._lbl_count = QLabel()
-        layout.addWidget(self._lbl_count)
+    # ------------------------------------------------------------------
+    # Load / Refresh
+    # ------------------------------------------------------------------
 
-    def load_page(self):
-        ev = self.ctrl.event
-        self._class_combo.blockSignals(True)
-        self._class_combo.clear()
-        self._class_combo.addItem("All classes", 0)
-        for cls in sorted(ev.classes.values(), key=lambda c: c.name):
-            if not cls.removed and cls.is_relay():
-                self._class_combo.addItem(cls.name, cls.id)
-        self._class_combo.blockSignals(False)
-        self._refresh_table()
-
-    def clear_competition_data(self):
-        self._model.setRowCount(0)
-        self._class_combo.clear()
-
-    def _refresh_table(self):
-        ev = self.ctrl.event
-        class_id = self._class_combo.currentData() or 0
-        teams = [t for t in ev.teams.values()
-                 if not t.removed and (class_id == 0 or t.class_id == class_id)]
-        teams.sort(key=lambda t: t.result_sort_key())
-        self._model.populate(teams, ev)
+    def load_page(self) -> None:
+        self._model.populate(
+            [t for t in self.ctrl.event.teams.values() if not t.removed],
+            self.ctrl.event)
         self._apply_filter()
-        self._lbl_count.setText(f"{len(teams)} team(s)")
 
     def _apply_filter(self):
-        text = self._search.text().strip()
-        class_id = self._class_combo.currentData() or 0
-        if class_id:
-            self._refresh_table()
-            return
-        self._proxy.setFilterFixedString(text)
+        text = self._search.text().lower()
+        if text:
+            self._proxy.setFilterRegularExpression(text)
+        else:
+            self._proxy.setFilterRegularExpression("")
 
-    def _selected_team_id(self) -> int:
-        idx = self._table.currentIndex()
-        if not idx.isValid():
-            return 0
-        src  = self._proxy.mapToSource(idx)
-        item = self._model.item(src.row(), 0)
-        return item.data(Qt.UserRole) if item else 0
+    # ------------------------------------------------------------------
+    # Team dialogs
+    # ------------------------------------------------------------------
 
     def _add_team(self):
-        dlg = TeamDialog(self.ctrl.event, parent=self)
+        dlg = TeamDialog(self.ctrl.event, self)
         if dlg.exec() == QDialog.Accepted:
-            d = dlg.get_data()
-            ev = self.ctrl.event
-            club_id  = ev.add_club(d["club_name"]).id if d["club_name"] else 0
-            cls_obj  = ev.get_class_by_name(d["class_name"])
-            class_id = cls_obj.id if cls_obj else 0
-            ev.add_team(d["name"], club_id, class_id)
-            self._refresh_table()
+            self.ctrl.event.add_team(
+                name=dlg.name.text(),
+                club_id=self.ctrl.event.get_club_by_name(dlg.club_combo.currentText()).id
+                if dlg.club_combo.currentText() else 0,
+                class_id=self.ctrl.event.get_class_by_name(dlg.class_combo.currentText()).id
+                if dlg.class_combo.currentText() else 0)
+            self.ctrl.event._notify("teams_changed", None)
 
     def _edit_team(self):
-        tid = self._selected_team_id()
-        if not tid:
+        selected = self._table.selectionModel().selectedRows()
+        if not selected:
             return
-        team = self.ctrl.event.teams.get(tid)
-        if team is None:
+        proxy_index = selected[0]
+        source_index = self._proxy.mapToSource(proxy_index)
+        team_id = self._model.index(source_index.row(), 0).data(Qt.UserRole)
+
+        team = self.ctrl.event.teams.get(team_id)
+        if not team:
             return
-        dlg = TeamDialog(self.ctrl.event, team=team, parent=self)
+
+        dlg = TeamDialog(self.ctrl.event, self, team)
         if dlg.exec() == QDialog.Accepted:
-            d = dlg.get_data()
-            team.name = d["name"]
+            team.name = dlg.name.text()
+            club = self.ctrl.event.get_club_by_name(dlg.club_combo.currentText())
+            cls = self.ctrl.event.get_class_by_name(dlg.class_combo.currentText())
+            if club:
+                team.club_id = club.id
+            if cls:
+                team.class_id = cls.id
             team.mark_changed()
-            self._refresh_table()
+            self.ctrl.event._notify("teams_changed", team)
 
     def _delete_team(self):
-        tid = self._selected_team_id()
-        if not tid:
+        selected = self._table.selectionModel().selectedRows()
+        if not selected:
             return
-        team = self.ctrl.event.teams.get(tid)
-        if team is None:
-            return
-        if QMessageBox.question(
-            self, "Delete Team", f"Delete team '{team.name}'?",
-            QMessageBox.Yes | QMessageBox.No
-        ) == QMessageBox.Yes:
-            self.ctrl.event.remove_team(tid)
-            self._refresh_table()
+        proxy_index = selected[0]
+        source_index = self._proxy.mapToSource(proxy_index)
+        team_id = self._model.index(source_index.row(), 0).data(Qt.UserRole)
+
+        team = self.ctrl.event.teams.get(team_id)
+        if team:
+            reply = QMessageBox.question(
+                self, "Delete Team",
+                f"Delete {team.name}?",
+                QMessageBox.Yes | QMessageBox.No)
+            if reply == QMessageBox.Yes:
+                self.ctrl.event.remove_team(team_id)
 
 
 class TeamDialog(QDialog):
-    def __init__(self, event, team=None, parent=None):
+    def __init__(self, event, parent=None, team=None):
         super().__init__(parent)
-        self.setWindowTitle("Add Team" if team is None else "Edit Team")
-        self._event = event
-        self._team  = team
-        self._build_ui()
-        if team:
-            self._populate(team)
+        self.setWindowTitle("Add Team" if not team else "Edit Team")
+        self._build_ui(event, team)
 
-    def _build_ui(self):
+    def _build_ui(self, event, team):
         layout = QFormLayout(self)
-        self._name  = QLineEdit()
-        self._club  = QComboBox(); self._club.setEditable(True)
-        self._class = QComboBox(); self._class.setEditable(True)
 
-        layout.addRow("Team name:", self._name)
-        layout.addRow("Club:",      self._club)
-        layout.addRow("Class:",     self._class)
+        self.name = QLineEdit()
+        self.club_combo = QComboBox()
+        self.class_combo = QComboBox()
 
-        for club in sorted(self._event.clubs.values(), key=lambda c: c.name):
+        # Populate combos
+        for club in event.clubs.values():
             if not club.removed:
-                self._club.addItem(club.name)
-        for cls in sorted(self._event.classes.values(), key=lambda c: c.name):
-            if not cls.removed and cls.is_relay():
-                self._class.addItem(cls.name)
+                self.club_combo.addItem(club.name)
+        for cls in event.classes.values():
+            if not cls.removed:
+                self.class_combo.addItem(cls.name)
 
-        btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        btns.accepted.connect(self.accept)
-        btns.rejected.connect(self.reject)
-        layout.addRow(btns)
+        # Set values
+        if team:
+            self.name.setText(team.name)
+            club = event.clubs.get(team.club_id)
+            if club:
+                self.club_combo.setCurrentText(club.name)
+            cls = event.classes.get(team.class_id)
+            if cls:
+                self.class_combo.setCurrentText(cls.name)
 
-    def _populate(self, t: Team):
-        self._name.setText(t.name)
-        club = self._event.clubs.get(t.club_id)
-        if club:
-            self._club.setCurrentText(club.name)
-        cls = self._event.classes.get(t.class_id)
-        if cls:
-            self._class.setCurrentText(cls.name)
+        layout.addRow("Name:", self.name)
+        layout.addRow("Club:", self.club_combo)
+        layout.addRow("Class:", self.class_combo)
 
-    def get_data(self) -> dict:
-        return {
-            "name":       self._name.text().strip(),
-            "club_name":  self._club.currentText().strip(),
-            "class_name": self._class.currentText().strip(),
-        }
+        # Buttons
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addRow(buttons)

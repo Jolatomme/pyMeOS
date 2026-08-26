@@ -1,198 +1,128 @@
 """
 views/tabs/tab_competition.py
-=============================
-Competition settings tab (TabCompetition equivalent).
+==============================
+Competition management tab (TabCompetition equivalent).
 
-Allows creating, opening, saving events and editing event metadata
-(name, date, organiser, zero time, currency, etc.).
+Features:
+   New / Open / Save competition
+   Event metadata editing
+   Database connection management
 """
 from __future__ import annotations
 
-import os
-from pathlib import Path
-
-from PySide6.QtCore import Qt, QDate
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QFormLayout,
-    QLineEdit, QPushButton, QDateEdit, QTimeEdit, QLabel,
-    QFileDialog, QMessageBox, QComboBox, QSpinBox, QSizePolicy,
-    QScrollArea, QFrame
+    QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
+    QFormLayout, QGroupBox, QLineEdit, QDateEdit,
+    QFileDialog, QMessageBox,
 )
-from PySide6.QtCore import QTime
 
+from utils.icon_utils import get_icon
 from .tab_base import TabBase
-from utils.localizer import trs
-from utils.time_utils import parse_time, format_time
 
 
 class TabCompetition(TabBase):
-    """Event metadata editor + new/open/save actions."""
-
     def __init__(self, controller, parent=None):
         super().__init__(controller, parent)
-        self._building = False
         self._build_ui()
+        self.ctrl.event_loaded.connect(self.load_page)
 
     # ------------------------------------------------------------------
     # UI construction
     # ------------------------------------------------------------------
 
-    def _build_ui(self) -> None:
-        root = QVBoxLayout(self)
-        root.setContentsMargins(12, 12, 12, 12)
-        root.setSpacing(10)
+    def _build_ui(self):
+        layout = QVBoxLayout(self)
 
-        # --- Action buttons row ----------------------------------------
-        btn_row = QHBoxLayout()
-        self._btn_new    = QPushButton(trs("New"))
-        self._btn_open   = QPushButton(trs("Open") + "…")
-        self._btn_save   = QPushButton(trs("Save"))
-        self._btn_saveas = QPushButton(trs("Save") + " as…")
-        for b in (self._btn_new, self._btn_open, self._btn_save, self._btn_saveas):
-            b.setFixedWidth(120)
-            btn_row.addWidget(b)
-        btn_row.addStretch()
-        root.addLayout(btn_row)
+        # ---- Event info group ------------------------------------------------
+        info_grp = QGroupBox("Event Information")
+        ig = QFormLayout(info_grp)
 
-        # --- Scroll area -----------------------------------------------
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        inner = QWidget()
-        scroll.setWidget(inner)
-        root.addWidget(scroll)
-
-        inner_layout = QVBoxLayout(inner)
-        inner_layout.setContentsMargins(0, 0, 0, 0)
-        inner_layout.setSpacing(14)
-
-        # --- Event metadata group --------------------------------------
-        grp_meta = QGroupBox(trs("Competition"))
-        form = QFormLayout(grp_meta)
-        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
-        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
-
-        self._edit_name = QLineEdit()
-        self._edit_annotation = QLineEdit()
-        self._edit_organiser  = QLineEdit()
-        self._date_edit = QDateEdit()
+        self._name_edit    = QLineEdit()
+        self._date_edit    = QDateEdit()
         self._date_edit.setCalendarPopup(True)
-        self._date_edit.setDisplayFormat("yyyy-MM-dd")
-        self._zero_time_edit = QTimeEdit()
-        self._zero_time_edit.setDisplayFormat("HH:mm:ss")
+        self._org_edit     = QLineEdit()
+        self._country_edit = QLineEdit()
 
-        form.addRow(trs("EventName") + ":", self._edit_name)
-        form.addRow(trs("EventDate") + ":", self._date_edit)
-        form.addRow(trs("EventOrganiser") + ":", self._edit_organiser)
-        form.addRow(trs("ZeroTime") + ":", self._zero_time_edit)
-        form.addRow("Annotation:", self._edit_annotation)
-        inner_layout.addWidget(grp_meta)
+        ig.addRow("Name:", self._name_edit)
+        ig.addRow("Date:", self._date_edit)
+        ig.addRow("Organiser:", self._org_edit)
+        ig.addRow("Country:", self._country_edit)
 
-        # --- Currency group -------------------------------------------
-        grp_curr = QGroupBox("Currency")
-        form_curr = QFormLayout(grp_curr)
-        self._edit_currency = QLineEdit()
-        self._edit_currency.setMaximumWidth(80)
-        form_curr.addRow("Currency code:", self._edit_currency)
-        inner_layout.addWidget(grp_curr)
+        layout.addWidget(info_grp)
 
-        inner_layout.addStretch()
+        # ---- File controls ---------------------------------------------------
+        file_grp = QGroupBox("File")
+        fg = QHBoxLayout(file_grp)
 
-        # --- Apply button ---------------------------------------------
-        btn_apply = QPushButton(trs("Save"))
-        btn_apply.setFixedWidth(120)
-        btn_apply.clicked.connect(self._apply)
-        root.addWidget(btn_apply, alignment=Qt.AlignmentFlag.AlignRight)
+        self._btn_new    = QPushButton(get_icon("general/new"),    "New Competition")
+        self._btn_open   = QPushButton(get_icon("general/open"),   "Open...")
+        self._btn_save   = QPushButton(get_icon("general/save"),   "Save")
+        self._btn_saveas = QPushButton(get_icon("general/save_as"), "Save As...")
 
-        # --- Signals --------------------------------------------------
-        self._btn_new.clicked.connect(self._new_event)
-        self._btn_open.clicked.connect(self._open_event)
-        self._btn_save.clicked.connect(self._save_event)
-        self._btn_saveas.clicked.connect(self._save_as_event)
+        self._btn_new.clicked.connect(self._on_new)
+        self._btn_open.clicked.connect(self._on_open)
+        self._btn_save.clicked.connect(self._on_save)
+        self._btn_saveas.clicked.connect(self._on_save_as)
+
+        for btn in (self._btn_new, self._btn_open, self._btn_save, self._btn_saveas):
+            fg.addWidget(btn)
+
+        layout.addWidget(file_grp)
+
+        # ---- Status -----------------------------------------------------------
+        self._lbl_file = QLabel("No competition loaded.")
+        layout.addWidget(self._lbl_file)
+
+        layout.addStretch()
 
     # ------------------------------------------------------------------
-    # TabBase interface
+    # Load / Refresh
     # ------------------------------------------------------------------
 
     def load_page(self) -> None:
-        self._building = True
         ev = self.ctrl.event
-        self._edit_name.setText(ev.name)
-        self._edit_annotation.setText(ev.annotation)
-        self._edit_organiser.setText(ev.organiser)
-        self._edit_currency.setText(ev.currency)
+        self._name_edit.setText(ev.name)
+        self._date_edit.setDate(ev.date)
+        self._org_edit.setText(ev.organiser)
+        self._country_edit.setText(ev.country)
 
-        if ev.date:
-            self._date_edit.setDate(QDate.fromString(ev.date, "yyyy-MM-dd"))
+        if ev.current_file:
+            self._lbl_file.setText(f"File: {ev.current_file}")
         else:
-            self._date_edit.setDate(QDate.currentDate())
-
-        zt = ev.zero_time
-        h  = zt // (3600 * 10)
-        m  = (zt % (3600 * 10)) // (60 * 10)
-        s  = (zt % (60 * 10)) // 10
-        self._zero_time_edit.setTime(QTime(h, m, s))
-
-        self._building = False
-
-    def clear_competition_data(self) -> None:
-        pass
+            self._lbl_file.setText("New competition (unsaved)")
 
     # ------------------------------------------------------------------
-    # Actions
+    # Button handlers
     # ------------------------------------------------------------------
 
-    def _apply(self) -> None:
-        ev = self.ctrl.event
-        ev.name        = self._edit_name.text().strip()
-        ev.annotation  = self._edit_annotation.text().strip()
-        ev.organiser   = self._edit_organiser.text().strip()
-        ev.currency    = self._edit_currency.text().strip() or "SEK"
-        ev.date        = self._date_edit.date().toString("yyyy-MM-dd")
-        t = self._zero_time_edit.time()
-        ev.zero_time   = (t.hour() * 3600 + t.minute() * 60 + t.second()) * 10
-        ev.mark_changed()
-        QMessageBox.information(self, trs("Info"), "Event metadata saved.")
+    def _on_new(self):
+        name, ok = QMessageBox.getText(
+            self, "New Competition", "Competition name:")
+        if ok and name:
+            self.ctrl.new_event(name)
 
-    def _new_event(self) -> None:
-        if QMessageBox.question(
-            self, trs("New"), "Create a new event? Unsaved changes will be lost.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        ) != QMessageBox.StandardButton.Yes:
-            return
-        self.ctrl.new_event()
-        self.load_page()
-
-    def _open_event(self) -> None:
+    def _on_open(self):
         path, _ = QFileDialog.getOpenFileName(
-            self, trs("Open"), "",
-            "MeOS XML (*.xml);;All Files (*)"
-        )
+            self, "Open Competition",
+            filter="MeOS XML (*.meosxml *.mexml *.xml);;All Files (*)")
         if path:
-            try:
-                self.ctrl.load_from_xml(path)
-                self.load_page()
-            except Exception as exc:
-                QMessageBox.critical(self, trs("Error"), str(exc))
+            ok = self.ctrl.open_event_from_xml(path)
+            if not ok:
+                QMessageBox.critical(self, "Error", "Failed to open file.")
 
-    def _save_event(self) -> None:
-        path = self.ctrl.event.current_file
-        if not path:
-            self._save_as_event()
-            return
-        try:
-            self.ctrl.save_to_xml(path)
-        except Exception as exc:
-            QMessageBox.critical(self, trs("Error"), str(exc))
+    def _on_save(self):
+        if self.ctrl.event.current_file:
+            self.ctrl.save_event_to_xml(self.ctrl.event.current_file)
+        else:
+            self._on_save_as()
 
-    def _save_as_event(self) -> None:
+    def _on_save_as(self):
         path, _ = QFileDialog.getSaveFileName(
-            self, trs("Save") + " as", "",
-            "MeOS XML (*.xml);;All Files (*)"
-        )
+            self, "Save Competition",
+            filter="MeOS XML (*.mexml);;All Files (*)")
         if path:
-            try:
-                self.ctrl.save_to_xml(path)
-                self.ctrl.event.current_file = path
-            except Exception as exc:
-                QMessageBox.critical(self, trs("Error"), str(exc))
+            if not path.endswith((".mexml", ".meosxml")):
+                path += ".mexml"
+            self.ctrl.event.current_file = path
+            self.ctrl.save_event_to_xml(path)
