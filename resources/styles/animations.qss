@@ -1,93 +1,25 @@
 /* =============================================================================
-   PyMeOS Advanced Animations Stylesheet
+   PyMeOS Animations Stylesheet
    
-   This file contains QSS-based animations and transitions for a modern,
-   fluid user experience. These animations work with Qt's built-in support
-   for CSS transitions and QPropertyAnimation.
-   
-   Usage: Load this AFTER your main stylesheet to override/extend animations.
-   
-   Note: Qt supports a subset of CSS animations. For complex animations,
-   use QPropertyAnimation in Python code.
+   Qt-compatible animations - Only uses properties supported by Qt
+   Note: Qt's QSS support is limited compared to CSS.
+   We only use standard Qt properties that work across all platforms.
    ============================================================================= */
 
 /* -----------------------------------------------------------------------------
-   Global Animation Settings
-   ---------------------------------------------------------------------------- */
-QWidget {
-    /* Enable smooth transitions for all properties */
-    transition: all 0.2s ease-in-out;
-}
-
-/* -----------------------------------------------------------------------------
-   Fade Animations
+   Button Animations (using Qt properties only)
    ---------------------------------------------------------------------------- */
 
-/* Fade in on show */
-QWidget[animate="fade-in"] {
-    opacity: 0;
-    animation: fadeIn 0.3s ease-out forwards;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-/* Fade out on hide */
-QWidget[animate="fade-out"] {
-    opacity: 1;
-    animation: fadeOut 0.3s ease-in forwards;
-}
-
-@keyframes fadeOut {
-    from { opacity: 1; }
-    to { opacity: 0; }
-}
-
-/* -----------------------------------------------------------------------------
-   Button Animations
-   ---------------------------------------------------------------------------- */
-
-/* Primary Button - Pulse on hover */
 QPushButton {
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    /* No CSS transitions in Qt - animations must be done via QPropertyAnimation */
 }
 
 QPushButton:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    /* Hover state styling */
 }
 
 QPushButton:pressed {
-    transform: translateY(0px);
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
-}
-
-/* Ghost Button - Border animation */
-QPushButton[ghost="true"] {
-    transition: border-color 0.2s ease, background-color 0.2s ease;
-}
-
-QPushButton[ghost="true"]:hover {
-    border-color: #3b82f6;
-    background-color: rgba(59, 130, 246, 0.05);
-}
-
-/* Icon Button - Scale animation */
-QToolButton,
-QPushButton[icon-only="true"] {
-    transition: transform 0.2s ease, background-color 0.2s ease;
-}
-
-QToolButton:hover,
-QPushButton[icon-only="true"]:hover {
-    transform: scale(1.05);
-}
-
-QToolButton:pressed,
-QPushButton[icon-only="true"]:pressed {
-    transform: scale(0.95);
+    /* Pressed state styling */
 }
 
 /* -----------------------------------------------------------------------------
@@ -95,494 +27,60 @@ QPushButton[icon-only="true"]:pressed {
    ---------------------------------------------------------------------------- */
 
 QTabBar::tab {
-    transition: all 0.2s ease;
+    /* Tab styling */
 }
 
 QTabBar::tab:selected {
-    animation: tabSelect 0.3s ease-out;
-}
-
-@keyframes tabSelect {
-    0% { background-color: #f1f5f9; color: #64748b; }
-    50% { background-color: #ffffff; color: #1d4ed8; }
-    100% { background-color: #ffffff; color: #1d4ed8; }
+    /* Selected tab styling */
 }
 
 QTabBar::tab:hover:!selected {
-    animation: tabHover 0.2s ease;
-}
-
-@keyframes tabHover {
-    from { background-color: #f1f5f9; }
-    to { background-color: #e2e8f0; }
+    /* Hover tab styling */
 }
 
 /* -----------------------------------------------------------------------------
    Input Field Animations
    ---------------------------------------------------------------------------- */
 
-QLineEdit,
-QComboBox,
-QSpinBox {
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
-}
-
 QLineEdit:focus,
-QComboBox:focus,
-QSpinBox:focus {
-    animation: inputFocus 0.2s ease-out;
-}
-
-@keyframes inputFocus {
-    0% { border-color: #e2e8f0; box-shadow: none; }
-    100% { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
-}
-
-/* Shake animation for invalid input */
-QLineEdit[invalid="true"],
-QSpinBox[invalid="true"] {
-    animation: shake 0.4s ease-in-out;
-}
-
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    20%, 60% { transform: translateX(-3px); }
-    40%, 80% { transform: translateX(3px); }
+QSpinBox:focus,
+QComboBox:focus {
+    /* Focus styling - Qt handles the transition automatically */
 }
 
 /* -----------------------------------------------------------------------------
    Table Animations
    ---------------------------------------------------------------------------- */
 
-QTableView {
-    transition: background-color 0.3s ease;
-}
-
 QTableView::item:hover {
-    animation: rowHover 0.15s ease;
+    /* Hover row styling */
 }
 
-@keyframes rowHover {
-    from { background-color: transparent; }
-    to { background-color: #f1f5f9; }
-}
-
-/* Row highlight animation when selected */
 QTableView::item:selected {
-    animation: rowSelect 0.2s ease-out;
-}
-
-@keyframes rowSelect {
-    from { background-color: transparent; }
-    to { background-color: #eff6ff; }
+    /* Selected row styling */
 }
 
 /* -----------------------------------------------------------------------------
    Menu Animations
    ---------------------------------------------------------------------------- */
 
-QMenu {
-    animation: menuSlideIn 0.2s ease-out;
-}
-
-@keyframes menuSlideIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-QMenu::item {
-    transition: all 0.15s ease;
-}
-
 QMenu::item:selected {
-    animation: menuItemSelect 0.15s ease;
-}
-
-@keyframes menuItemSelect {
-    from { background-color: transparent; color: #475569; }
-    to { background-color: #eff6ff; color: #1d4ed8; }
+    /* Selected menu item styling */
 }
 
 /* -----------------------------------------------------------------------------
-   Progress Bar Animations
-   ---------------------------------------------------------------------------- */
-
-QProgressBar {
-    transition: background-color 0.3s ease;
-}
-
-QProgressBar::chunk {
-    animation: progressPulse 1.5s ease-in-out infinite;
-}
-
-@keyframes progressPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-}
-
-/* Indeterminate progress bar animation */
-QProgressBar[indeterminate="true"]::chunk {
-    animation: progressIndeterminate 1.5s linear infinite;
-}
-
-@keyframes progressIndeterminate {
-    0% { transform: translateX(-24px); }
-    100% { transform: translateX(24px); }
-}
-
-/* -----------------------------------------------------------------------------
-   Checkbox & Radio Button Animations
-   ---------------------------------------------------------------------------- */
-
-QCheckBox::indicator {
-    transition: all 0.2s ease;
-}
-
-QCheckBox::indicator:checked {
-    animation: checkmarkBounce 0.3s ease-out;
-}
-
-@keyframes checkmarkBounce {
-    0% { transform: scale(0.8); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-}
-
-QRadioButton::indicator {
-    transition: all 0.2s ease;
-}
-
-QRadioButton::indicator:checked {
-    animation: radioPulse 0.3s ease-out;
-}
-
-@keyframes radioPulse {
-    0% { transform: scale(0.8); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-}
-
-/* -----------------------------------------------------------------------------
-   Dialog Animations
-   ---------------------------------------------------------------------------- */
-
-QDialog {
-    animation: dialogFadeIn 0.2s ease-out;
-}
-
-@keyframes dialogFadeIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95) translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-}
-
-/* -----------------------------------------------------------------------------
-   Status Bar Animations
-   ---------------------------------------------------------------------------- */
-
-QStatusBar QLabel {
-    transition: all 0.3s ease;
-}
-
-QStatusBar QLabel[flash="true"] {
-    animation: statusFlash 0.5s ease-in-out;
-}
-
-@keyframes statusFlash {
-    0%, 100% { background-color: transparent; color: #64748b; }
-    50% { background-color: #eff6ff; color: #1d4ed8; }
-}
-
-/* -----------------------------------------------------------------------------
-   ScrollBar Animations
-   ---------------------------------------------------------------------------- */
-
-QScrollBar::handle:vertical,
-QScrollBar::handle:horizontal {
-    transition: background 0.2s ease;
-}
-
-QScrollBar::handle:vertical:hover,
-QScrollBar::handle:horizontal:hover {
-    animation: scrollbarPulse 0.2s ease;
-}
-
-@keyframes scrollbarPulse {
-    from { background: #cbd5e1; }
-    to { background: #94a3b8; }
-}
-
-/* -----------------------------------------------------------------------------
-   GroupBox Animations
-   ---------------------------------------------------------------------------- */
-
-QGroupBox {
-    transition: border-color 0.3s ease, background-color 0.3s ease;
-}
-
-QGroupBox:hover {
-    border-color: #3b82f6;
-    background-color: #ffffff;
-}
-
-QGroupBox:pressed {
-    border-color: #1d4ed8;
-}
-
-/* -----------------------------------------------------------------------------
-   Card Animations (QFrame#card)
-   ---------------------------------------------------------------------------- */
-
-QFrame#card {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-QFrame#card:hover {
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
-}
-
-QFrame#card:pressed {
-    transform: translateY(0px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-/* -----------------------------------------------------------------------------
-   Loading Spinner Animation
-   ---------------------------------------------------------------------------- */
-
-QProgressBar[loading="true"] {
-    border-radius: 50%;
-    border: 3px solid #f3f4f6;
-    border-top-color: #3b82f6;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* -----------------------------------------------------------------------------
-   Tooltip Animations
-   ---------------------------------------------------------------------------- */
-
-QToolTip {
-    animation: tooltipFadeIn 0.2s ease-out;
-}
-
-@keyframes tooltipFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(5px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* -----------------------------------------------------------------------------
-   Table Header Sort Indicator Animation
-   ---------------------------------------------------------------------------- */
-
-QHeaderView::section {
-    transition: background-color 0.2s ease;
-}
-
-QHeaderView::section:sort-indicator {
-    animation: sortPulse 0.5s ease;
-}
-
-@keyframes sortPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
-/* -----------------------------------------------------------------------------
-   Button Loading State Animation
-   ---------------------------------------------------------------------------- */
-
-QPushButton[loading="true"] {
-    position: relative;
-    color: transparent;
-}
-
-QPushButton[loading="true"]::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 20px;
-    height: 20px;
-    margin: -10px 0 0 -10px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: #ffffff;
-    border-radius: 50%;
-    animation: buttonSpin 0.8s linear infinite;
-}
-
-@keyframes buttonSpin {
-    to { transform: rotate(360deg); }
-}
-
-/* -----------------------------------------------------------------------------
-   Notification Badge Animation
-   ---------------------------------------------------------------------------- */
-
-QPushButton[badge="true"]::after {
-    content: attr(badge-text);
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    background: #ef4444;
-    color: white;
-    border-radius: 10px;
-    padding: 2px 6px;
-    font-size: 10px;
-    font-weight: bold;
-    animation: badgeBounce 0.3s ease-out;
-}
-
-@keyframes badgeBounce {
-    0% { transform: scale(0); }
-    50% { transform: scale(1.2); }
-    100% { transform: scale(1); }
-}
-
-/* -----------------------------------------------------------------------------
-   Side Panel Slide Animation
-   ---------------------------------------------------------------------------- */
-
-QFrame[side-panel="true"] {
-    transition: width 0.3s ease, opacity 0.3s ease;
-}
-
-QFrame[side-panel="true"][collapsed="true"] {
-    width: 0;
-    opacity: 0;
-}
-
-QFrame[side-panel="true"][collapsed="false"] {
-    width: 250px;
-    opacity: 1;
-}
-
-/* -----------------------------------------------------------------------------
-   Floating Action Button (FAB) Animation
-   ---------------------------------------------------------------------------- */
-
-QPushButton[fab="true"] {
-    border-radius: 50%;
-    width: 56px;
-    height: 56px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-QPushButton[fab="true"]:hover {
-    transform: scale(1.1);
-    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
-}
-
-QPushButton[fab="true"]:pressed {
-    transform: scale(0.9);
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
-}
-
-/* -----------------------------------------------------------------------------
-   Search Field Animation
-   ---------------------------------------------------------------------------- */
-
-QLineEdit[search="true"] {
-    transition: all 0.3s ease;
-}
-
-QLineEdit[search="true"]:focus {
-    width: 200px;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-/* -----------------------------------------------------------------------------
-   Collapsible Section Animation
-   ---------------------------------------------------------------------------- */
-
-QGroupBox[collapsible="true"] {
-    transition: max-height 0.3s ease, opacity 0.3s ease;
-}
-
-QGroupBox[collapsible="true"][collapsed="true"] {
-    max-height: 0;
-    opacity: 0;
-    overflow: hidden;
-}
-
-QGroupBox[collapsible="true"][collapsed="false"] {
-    max-height: 1000px;
-    opacity: 1;
-}
-
-/* -----------------------------------------------------------------------------
-   Tab Content Fade Animation
-   ---------------------------------------------------------------------------- */
-
-QTabWidget::pane {
-    transition: opacity 0.3s ease;
-}
-
-QTabWidget::pane[animating="true"] {
-    opacity: 0;
-}
-
-/* -----------------------------------------------------------------------------
-   Custom Animations for Specific Widgets
-   ---------------------------------------------------------------------------- */
-
-/* Animation for SI card read notification */
-QFrame[si-card-notification="true"] {
-    animation: cardNotificationSlide 0.5s ease-out;
-}
-
-@keyframes cardNotificationSlide {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-/* Animation for result calculation completion */
-QLabel[result-flash="true"] {
-    animation: resultFlash 0.5s ease-in-out;
-}
-
-@keyframes resultFlash {
-    0%, 100% { background-color: transparent; }
-    50% { background-color: #dcfce7; }
-}
-
-/* -----------------------------------------------------------------------------
-   Reduced Motion (for accessibility)
-   ---------------------------------------------------------------------------- */
-
-/* Disable animations when reduced motion is preferred */
-@media (prefers-reduced-motion: reduce) {
-    QWidget {
-        transition: none !important;
-        animation: none !important;
-    }
-}
+   Note: True CSS animations (keyframes, transitions) are NOT supported by Qt.
+   For advanced animations, use QPropertyAnimation in Python code.
+   
+   Example:
+   
+   from PySide6.QtCore import QPropertyAnimation, QEasingCurve
+   
+   anim = QPropertyAnimation(button, b"geometry")
+   anim.setDuration(200)
+   anim.setStartValue(button.geometry())
+   anim.setEndValue(new_geometry)
+   anim.setEasingCurve(QEasingCurve.OutQuad)
+   anim.start()
+   
+   ============================================================================= */
