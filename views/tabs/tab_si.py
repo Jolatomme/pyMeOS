@@ -11,13 +11,12 @@ Features:
 """
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QPushButton, QTextEdit, QLabel,
     QComboBox, QCheckBox, QGroupBox, QFormLayout, QSpinBox,
-    QLineEdit, QDialogButtonBox, QDialog,
 )
-from PySide6.QtGui import QColor, QTextCharFormat, QTextCursor
+from PySide6.QtGui import QTextCursor
 
 from hardware.si_reader import SIReaderManager as SIReader, SICardReadEvent, SIPunchEvent
 from utils.time_utils import format_time
@@ -135,7 +134,6 @@ class TabSI(TabBase):
     # Card handling
     # ------------------------------------------------------------------
 
-    @Slot
     def _on_card_read(self, ev: SICardReadEvent):
         card = ev.card
         self._log.append(f"Card {card.card_number} read from {ev.port}")
@@ -149,7 +147,6 @@ class TabSI(TabBase):
         cursor.movePosition(QTextCursor.End)
         self._log.setTextCursor(cursor)
 
-    @Slot
     def _on_si_error(self, port: str, message: str):
         self._log.append(f"ERROR [{port}]: {message}")
 
