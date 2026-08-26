@@ -1,0 +1,59 @@
+<RCC>
+    <qresource prefix="/icons">
+        <!-- General Icons -->
+        <file>icons/general/new.svg</file>
+        <file>icons/general/open.svg</file>
+        <file>icons/general/save.svg</file>
+        <file>icons/general/save_as.svg</file>
+        <file>icons/general/close.svg</file>
+        <file>icons/general/quit.svg</file>
+        <file>icons/general/settings.svg</file>
+        <file>icons/general/help.svg</file>
+        <file>icons/general/about.svg</file>
+        
+        <!-- Action Icons -->
+        <file>icons/actions/add.svg</file>
+        <file>icons/actions/edit.svg</file>
+        <file>icons/actions/delete.svg</file>
+        <file>icons/actions/refresh.svg</file>
+        <file>icons/actions/import.svg</file>
+        <file>icons/actions/export.svg</file>
+        <file>icons/actions/search.svg</file>
+        <file>icons/actions/filter.svg</file>
+        <file>icons/actions/clear.svg</file>
+        <file>icons/actions/clear_log.svg</file>
+        <file>icons/actions/calculate.svg</file>
+        <file>icons/actions/draw.svg</file>
+        
+        <!-- Competition Icons -->
+        <file>icons/competition/runner.svg</file>
+        <file>icons/competition/team.svg</file>
+        <file>icons/competition/class.svg</file>
+        <file>icons/competition/course.svg</file>
+        <file>icons/competition/control.svg</file>
+        <file>icons/competition/club.svg</file>
+        <file>icons/competition/results.svg</file>
+        <file>icons/competition/speaker.svg</file>
+        
+        <!-- SI Reader Icons -->
+        <file>icons/si/usb.svg</file>
+        <file>icons/si/usb_off.svg</file>
+        <file>icons/si/card.svg</file>
+        <file>icons/si/si_station.svg</file>
+        <file>icons/si/test_card.svg</file>
+        <file>icons/si/signal.svg</file>
+        
+        <!-- Status Icons -->
+        <file>icons/status/ok.svg</file>
+        <file>icons/status/dnf.svg</file>
+        <file>icons/status/dns.svg</file>
+        <file>icons/status/dq.svg</file>
+        <file>icons/status/mp.svg</file>
+        <file>icons/status/warning.svg</file>
+        
+        <!-- Styles -->
+        <file>styles/default.qss</file>
+        <file>styles/dark.qss</file>
+        <file>styles/animations.qss</file>
+    </qresource>
+</RCC>

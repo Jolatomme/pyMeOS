@@ -26,7 +26,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 # ---------------------------------------------------------------------------
-# Qt environment tweaks – MUST happen before QApplication is created
+# Qt environment tweaks - MUST happen before QApplication is created
 # ---------------------------------------------------------------------------
 
 # Silence the "dbus reply error" spam from the GNOME platform-theme plugin.
@@ -44,10 +44,11 @@ if _gnome_rule not in _existing_rules:
 # However, QApplication may not exist yet at import time, so we defer to main()
 
 from views.main_window import MainWindow
+from resources.styles import is_dark_mode_enabled, get_theme_path, get_animations_path
 
 
 def _parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="PyMeOS – Orienteering Software")
+    p = argparse.ArgumentParser(description="PyMeOS - Orienteering Software")
     p.add_argument("--db",
                    default="sqlite:///pymeos.db",
                    help="SQLAlchemy database URL (default: sqlite:///pymeos.db)")
@@ -58,6 +59,13 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--open",
                    metavar="FILE",
                    help="Open a .mexml competition file on startup")
+    p.add_argument("--theme",
+                   default="auto",
+                   choices=["light", "dark", "auto"],
+                   help="UI theme: light, dark, or auto (default: auto)")
+    p.add_argument("--no-animations",
+                   action="store_true",
+                   help="Disable UI animations")
     return p.parse_args()
 
 
@@ -88,11 +96,33 @@ def main() -> int:
     app.setApplicationVersion("5.0.0")
     app.setOrganizationName("PyMeOS Community")
 
-    # Load stylesheet
-    stylesheet_path = PROJECT_ROOT / "resources" / "styles" / "default.qss"
-    if stylesheet_path.exists():
-        with open(stylesheet_path, "r") as f:
-            app.setStyleSheet(f.read())
+    # Load stylesheet with theme support
+    theme = args.theme
+    with_animations = not args.no_animations
+    
+    # Determine theme path
+    if theme == "auto":
+        theme_path = get_theme_path("dark" if is_dark_mode_enabled() else "light")
+    else:
+        theme_path = get_theme_path(theme)
+    
+    # Load and apply stylesheet
+    stylesheet = ""
+    if theme_path.exists():
+        stylesheet = theme_path.read_text(encoding="utf-8")
+        
+        # Add animations if enabled
+        if with_animations:
+            animations_path = get_animations_path()
+            if animations_path.exists():
+                stylesheet += "\n\n" + animations_path.read_text(encoding="utf-8")
+        
+        app.setStyleSheet(stylesheet)
+    else:
+        # Fallback to default if theme file not found
+        default_path = PROJECT_ROOT / "resources" / "styles" / "default.qss"
+        if default_path.exists():
+            app.setStyleSheet(default_path.read_text(encoding="utf-8"))
 
     window = MainWindow(db_url=args.db)
     window.show()
